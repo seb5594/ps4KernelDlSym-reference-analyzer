@@ -11,9 +11,12 @@ You are permitted to use/edit this source code, as long you are referning to thi
 - brain
 
 # How does it work?
-This application uses the [open source disassembler library Capstone.NET](https://github.com/9ee1/Capstone.NET), to analyze function calls from x86_64 assemblies compiled binarys (payload/s), for further development reasons.
-It resolves all absolute calls to ps4KernelDlSym and it outputs a list of all symbol name(s), which are needed to execute the payload!
+This application uses the [open source disassembler library Capstone.NET](https://github.com/9ee1/Capstone.NET), which is a core funcutality to analyze function calls in x86_64 assemblies compiled binarys (payload/s), for further development reasons, by extracting the text sections of the payload elf file using [ElfIO by therifboy](https://github.com/therifboy/ElfIO)
+It resolves all absolute calls to ps4KernelDlSym and it outputs a list of all symbol name(s), which are required to execute the payload!
 The resulting output will be displayed as a raw list (default) or in a c-styled array (my preferred way).
+
+# Options
+The GUI offers the possibility to order the result in execution order or aLphabetical. It is also possible, to output the result in a c-styled array!
 
 # ToDo (coming soon?)
 - Resolve stacked symbol names (might be added, when i feel to!)
