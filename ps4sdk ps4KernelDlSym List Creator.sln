@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2010
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ps4sdk ps4KernelDlSym List Creator", "ps4sdk ps4KernelDlSym List Creator\ps4sdk ps4KernelDlSym List Creator.csproj", "{827FE3B7-72B8-40B4-ADA7-2F1C0A52EFA4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{827FE3B7-72B8-40B4-ADA7-2F1C0A52EFA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{827FE3B7-72B8-40B4-ADA7-2F1C0A52EFA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{827FE3B7-72B8-40B4-ADA7-2F1C0A52EFA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{827FE3B7-72B8-40B4-ADA7-2F1C0A52EFA4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E0BB5FE5-53BC-4815-B01D-1099681E179C}
+	EndGlobalSection
+EndGlobal
