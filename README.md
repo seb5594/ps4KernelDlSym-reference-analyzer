@@ -1,7 +1,7 @@
 # ps4sdk ps4KernelDlSym Symbol Resolver
 
-The ps4sdk ps4KernelDlSym Symbol Resolver is a windows forms application (requires .NET 4.0), which has been made to fit my needs for ps4 compiled payloads using [Hitodamas open source ps4 sdk](https://github.com/seb5594/ps4sdk) .
-This tool has been made to generate dynamically an offsettable containing all symbol names and corresponeding offsets, where are getting called in a executable. In the current state, it is impossible to resolve stacked function calls.
+The ps4sdk ps4KernelDlSym Symbol Resolver is a windows forms application (requires .NET 4.0), which has been made to fit my needs for ps4 compiled payloads using [as example my version of Hitodamas open source ps4 sdk](https://github.com/seb5594/ps4sdk) .
+This tool has been made to generate dynamically an offsettable containing all kernel symbol names and the corresponeding offsets, where are getting called in a executable. In the current state, it is impossible to resolve stacked function calls.
 If i feel to, i will extend this application with the feature of stacked function calls.
 You are permitted to use/edit this source code, as long you are referning to this project.
 
@@ -17,3 +17,6 @@ The resulting output will be displayed as a raw list (default) or in a c-styled 
 
 # ToDo (coming soon?)
 - Resolve stacked symbol names (might be added, when i feel to!)
+
+# Contribute
+Feel free to submit pull requests, to improve the development of this project!
