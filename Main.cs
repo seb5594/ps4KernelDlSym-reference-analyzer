@@ -45,7 +45,7 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
 
             foreach (String file in files)
             {
-                if (file.EndsWith("elf"))
+                if (file.EndsWith("elf") || file.EndsWith("self"))
                     ps4ElfPath = file;
             }
 
@@ -116,7 +116,9 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
 
         public void UpdateControls(Boolean state = false)
         {
-            if(state)
+            if (!state)
+                ps4ElfBuffer = null;
+            else
             {
                 bool isRaw = rawToolStripMenuItem.Checked;
                 bool isSorted = nameToolStripMenuItem.Checked;
@@ -138,7 +140,8 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
                 if (isSorted)
                     sym_list.Sort();
 
-                result = String.Join("\n", sym_list);
+                result = sym_list.ToString();//String.Join("\n", sym_list);//sym_list.ToString();
+                //MessageBox.Show("result:\n" + result);
 
                 // output format
                 if(!isRaw) // c style array
@@ -158,11 +161,8 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
 
             update:
             textBox.Visible = reloadToolStripMenuItem.Visible = closeToolStripMenuItem.Visible = resultToolStripDropDownButton.Visible = state;
-            if (state)
-            {
-                labelLoadedFile.Text = "Loaded file: " + Path.GetFileName(ps4ElfPath) ?? "/";
-                reloadToolStripMenuItem.Text = "Reload: " + Path.GetFileName(ps4ElfPath) ?? "/";
-            }
+            labelLoadedFile.Text = "Loaded file: " + Path.GetFileName(ps4ElfPath) ?? "/";
+            reloadToolStripMenuItem.Text = "Reload: " + Path.GetFileName(ps4ElfPath) ?? "/";
         }
         #endregion
 
@@ -219,7 +219,7 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
                 if (symbolOffset != 0)
                 {
                     UInt64 physicalSymbolOffset = GetPhysicalAddress(symbolOffset);
-                    symbolName = Encoding.Default.GetString(ps4ElfBuffer, (int)physicalSymbolOffset, 32);
+                    symbolName = Encoding.Default.GetString(ps4ElfBuffer, (int)physicalSymbolOffset, 50);
                     if (symbolName.Contains("\0"))
                         symbolName = new String(symbolName.Take(symbolName.IndexOf("\0")).ToArray());
                 }
@@ -238,30 +238,30 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
 
         class SymbolPool
         {
-            List<String> Symbols;
+            private List<String> _symbols;
             
             public SymbolPool()
             {
-                Symbols = new List<String>();
+                _symbols = new List<String>();
             }
 
             public void Add(Int64 address, String symbol)
             {
                 if (address > 0 & symbol != "")
-                    Symbols.Add($"{address}|{symbol}");
+                    _symbols.Add($"{address}|{symbol}");
             }
 
-            public void Clear() => Symbols.Clear();
+            public void Clear() => _symbols.Clear();
 
             public List<String> Get
             {
                 get
                 {
-                    int count = Symbols.Count;
-                    if (count <= 0)
-                        return null;//throw new NullReferenceException();
+                    int count = ~0;
+                    if (_symbols == null || (count = _symbols.Count) <= 0)
+                        return null; // throw new NullReferenceException();
 
-                    var sym_list = Symbols.GetRange(0, count);
+                    var sym_list = _symbols.GetRange(0, count);
                     for (var i = 0; i < count; i++)
                         sym_list[i] = sym_list[i].Split('|')[1];
 
@@ -271,18 +271,18 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
 
             public Int32 GetRefCount()
             {
-                int count = Symbols.Count, ref_count = -1;
+                int count = _symbols.Count, ref_count = -1;
                 if (count <= 0)
                     goto ret;
 
-                var sym_list = Symbols.GetRange(0, count).Distinct().ToList();
+                var sym_list = _symbols.GetRange(0, count).Distinct().ToList();
                 ref_count = sym_list.Count;
 
                 ret:
                 return ref_count;
             }
 
-            public override String ToString() => String.Join("\n", Symbols);
+            public override String ToString() => String.Join("\n", _symbols);
         }
 
         private void ps4KernelDlSymRetrieveSymbols(Byte[] buffer)
@@ -378,38 +378,147 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
 
         private bool ProcessPS4Elf(String elf_path)
         {
-            if (!File.Exists(elf_path))
-                return false;
+            bool loaded = false;
 
             sympool.Clear();
             textBox.Text = resultString = "";
+
+            if (loaded = !File.Exists(elf_path))
+                goto ret;
+
+            var elfBegin = 0;
             ps4ElfBuffer = File.ReadAllBytes(elf_path);
+            if (elf_path.EndsWith("self"))
+            {
+                // handle self
+                var head_length = SearchBytes(ps4ElfBuffer, new Byte[] { 0x7F, 0x45, 0x4C, 0x46 });
+                if(loaded = (head_length < 0 || head_length > 231))
+                {
+                    MessageBox.Show("Can not find elf header in provided self file!");
+                    goto ret;
+                }
+                /*var self_header = ps4ElfBuffer.Take(head_length).ToList();//ToList().GetRange(0, head_length);
+                var magic = BitConverter.ToUInt32(self_header.Take(4).ToArray().Reverse(), 0);
+                var type_content = self_header[0x8];
+                var type_product = self_header[0x9];
+                head_length = BitConverter.ToInt16(self_header.GetRange(0xC, 2).ToArray().Reverse(), 0);
+                var self_size = BitConverter.ToInt32(self_header.GetRange(0x10, 4).ToArray().Reverse(), 0);
+                var segm_count = BitConverter.ToInt16(self_header.GetRange(0x18, 2).ToArray().Reverse(), 0);
+                */
+
+                var self_header = fself.self_header.InitByBuffer(ps4ElfBuffer.Get(head_length));
+                MessageBox.Show("self hdr:\n" + self_header);
+                if (loaded = self_header.magic != 0x4F153D1D)
+                {
+                    MessageBox.Show("Invalid magic in provided self file!");
+                    goto ret;
+                }
+                else if (loaded = !(self_header.content_type == 1))
+                {
+                    MessageBox.Show("Invalid content type in provided self file!");
+                    goto ret;
+                }
+                else if (loaded = !(self_header.self_size < 0))
+                {
+                    MessageBox.Show("Invalid self size in provided self file!");
+                    goto ret;
+                }
+                ps4ElfBuffer = ps4ElfBuffer.Skip(elfBegin = head_length).ToArray();
+
+                //elfBegin = SearchBytes(ps4ElfBuffer, new Byte[] { 0x7F, 0x45, 0x4C, 0x46 });//head_length;
+                MessageBox.Show("elf begin: " + elfBegin.ToString("X"));
+                //ps4ElfBuffer = ps4ElfBuffer.Skip(elfBegin).ToArray();
+
+            }
             elfio = new ElfIO.ElfIO();
-            elfio.Load(elf_path);
+            elfio.Load(elf_path, elfBegin);
             UInt64 entrypoint = elfio.Elf.Header.EntryPoint;
             textBox.Text += "entrypoint: 0x" + entrypoint.ToString("X2") + "; ps4ElfBuffer size: " + ps4ElfBuffer.Length + "\n";
-            bool loaded = ps4ElfBuffer != null;
-            if (loaded)
+            if (loaded = (ps4ElfBuffer != null))
             {
                 ps4KernelDlSym_offset = ps4KernelDlSymRetrieveOffset(ps4ElfBuffer);
-                if (ps4KernelDlSym_offset != ~0)
+                if (loaded = ps4KernelDlSym_offset != ~0)
                     textBox.Text += "ps4KernelDlSym offset: 0x" + ps4KernelDlSym_offset.ToString("X2") + "\n";
                 else
-                    MessageBox.Show("Could not find ps4KernelDlSym in elf");
-
-
-                foreach (var prog in elfio.Elf.Programs)
                 {
-                    var prog_size = prog.Header.FileSize;
-                    var buffer = new Byte[prog_size];
-                    Array.Copy(ps4ElfBuffer, (int)prog.Header.FileOffset, buffer, 0, (int)prog_size);
-                    ps4KernelDlSymRetrieveSymbols(buffer);
+                    MessageBox.Show("Could not find ps4KernelDlSym in elf");
+                    goto ret;
                 }
 
+                if (!(loaded = elfio.Elf.Programs.Count > 0))
+                {
+                    MessageBox.Show("Given executable has no program sections!");
+                    goto ret;
+                }
+                //MessageBox.Show("prog_count: " + elfio.Elf.Programs.Count);
+                //MessageBox.Show(elfio.Elf.Header.ToString());
+                foreach (var prog in elfio.Elf.Programs)
+                {
+                    if (prog.Header.Flags !=( ElfIO.ElfProgramFlags.PF_R | ElfIO.ElfProgramFlags.PF_X))
+                        continue;
+
+                    MessageBox.Show(prog.Header.ToString() + "\n" );
+
+                    var prog_length = (int)prog.Header.FileSize;
+                    var prog_buffer = new Byte[prog_length];
+                    var prog_offset = (int)prog.Header.FileOffset;// + elfBegin;//.FileOffset + elfBegin - 12;//elfBegin == 0 ? prog.Header.FileOffset : prog.Header
+
+                    //if()
+
+                    //bool fake_elf = ((int)prog.Header.Type >= 0xFE00 || (int)prog.Header.Type <= 0xFE18);
+                    //MessageBox.Show("fake_elf:" + fake_elf.ToString());
+                    // handle fselfs
+                    if (elfBegin > 0)
+                    {
+                        //prog_offset -= 12;
+                        //prog_length = (int)prog.Header.PhysicalAddress;
+                        //prog_length = (int)prog.Header.MemorySize;
+                        //Array.Resize(ref prog_buffer, prog_length);
+
+                        //MessageBox.Show("calc fileoffset: " + ((int)prog.Header.Align + prog_offset).ToString("X"));//+Math.Abs(prog_length + prog_offset + (int)prog.Header.Align - 1 & ~((int)prog.Header.Align - 1)).ToString("X"));
+                       // prog_length = (int)prog.Header.MemorySize;
+                        //prog_length -= (int)prog.Header.Align;
+
+                        //prog_offset -= Math.Abs(0x1000);
+                        //prog_buffer = new List<Byte>();
+                        // prog_length = (int)prog.Header. + elfBegin;
+                        //prog_buffer = new List<Byte>();
+                        //prog_offset = (int)prog.Header.FileOffset + elfBegin;
+
+
+                        /*var mask = (int)prog.Header.Align;
+                        var align = (prog_length + mask) & ~mask;
+                        prog_length = align;*/
+
+                        //(FileOffset + FileSize + Align - 1) & ~(Align - 1));
+                        //prog_offset += elfBegin;
+                       // prog_length = //Math.Abs(prog_length + prog_offset + (int)prog.Header.Align -1 & ~((int)prog.Header.Align - 1));
+                        //MessageBox.Show("prog_length: " + prog_length.ToString("X"));
+
+                        //prog_length = (int)prog.Header.PhysicalAddress + 1; //(int)prog.Header.FileSize;
+                        //Array.Resize(ref prog_buffer, prog_length);
+                        //prog_buffer = new Byte[prog_length];
+                        //prog_offset -= elfBegin;//= (int)prog.Header.;
+                        //prog_offset = (int)prog.Header.PhysicalAddress;
+
+                        //prog_length =
+
+                        //prog_offset = (int)GetPhysicalAddress((ulong)prog_offset);
+                    }
+                    MessageBox.Show($"elfBegin: {elfBegin.ToString("X2")}\nprog_length: 0x{prog_length.ToString("X2")} / {prog_length}\nprog_offset: 0x{prog_offset.ToString("X2")} / {prog_offset}\nprog_end: 0x{(prog_length + prog_offset).ToString("X2")}");
+                   // if (prog_length > ps4ElfBuffer.Length)
+                     //   continue;
+
+                    Array.Copy(ps4ElfBuffer, prog_offset, prog_buffer, 0, prog_length);
+
+                    ps4KernelDlSymRetrieveSymbols(prog_buffer);
+                    MessageBox.Show("Resolved " + sympool.GetRefCount());
+                }
+                
                 var sym_count = sympool.Get.Count;
                 var ref_count = sympool.GetRefCount();
-                if (sym_count < 1 & ref_count == -1)
-                    throw new Exception();
+                if (!(loaded = sym_count > 1 || ref_count > 1))
+                    goto ret;
 
                 textBox.Text += String.Format("Resolved {0} symbol names and observed {1} calls to ps4KernelDlSym\n\n", sym_count, ref_count);
                 
@@ -417,6 +526,8 @@ namespace ps4sdk_ps4KernelDlSym_List_Creator
             else
                 MessageBox.Show("Could not load");
 
+            ret:
+            //MessageBox.Show($"ProcessPS4Elf({elf_path}): {loaded.ToString()}");
             return loaded;
         }
 
