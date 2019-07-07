@@ -1002,7 +1002,7 @@ namespace ElfIO
         }
 
         public override String ToString() =>
-            String.Format("Name: 0x{0:X4}\nType: {1}\nFlags: {2}\nAddress: 0x{3:X8}\nOffset: 0x{4:X8} => 0x{10:X8} => 0x{11:X8}\nSize: 0x{5:X8}\nLink: 0x{6:X4}\nInfo: 0x{7:X4}\nAlign: 0x{8:X8}\nEntries: 0x{9:X8}\n\n",
+            String.Format("Name: 0x{0:X4}\nType: {1}\nFlags: {2}\nAddress: 0x{3:X8}\nOffset: 0x{4:X8} => 0x{10:X8} => 0x{11:X8}\nSize: 0x{5:X8}\nLink: 0x{6:X4}\nInfo: 0x{7:X4}\nAlign: 0x{8:X8}\nEntry size: 0x{9:X8}\\n",//nFile size: 0x{10:X8}\nFile size aligned: 0x{11:X8}
                             Name,
                             Type,
                             Flags,
